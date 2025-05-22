@@ -21,179 +21,6 @@ ygkn / Yugo Yagita<br>
 - 株式会社ゆめみ フロントエンドエンジニア
 - TypeScriptとReactを書いています
 - アクセシビリティに興味があります
-
----
-
-# テーブルをリファクタリングした話
-
-デモ： https://typed-table-demo.vercel.app/
-（このデモは型が主役のため、実装はやっつけになっています）
-
----
-
-![bg contain](./image1.png)
-
-
----
-
-![bg contain](./image2.png)
-
-
----
-
-![bg contain](./image3.png)
-
-
-
----
-
-![bg contain](./image4.png)
-
----
-
-# ストーリー
-
-1. 型安全でないテーブル設定の問題
-2. 「型パズル」への挑戦、没頭
-3. 300行を超える型定義地獄
-4. リファクタリングへの挑戦
-
----
-
-# 最初のコード
-
-テーブルコンポーネントの設定が複数の場所に分散していた
-
-```typescript
-// tableConfigs.ts
-const tableConfigs: TableConfigs<User> = {
-  name: { name: '名前' },
-  age: { name: '年齢' }
-};
-```
-
-```typescript
-// filterConfigs.ts（別ファイル）
-const filterConfigs: TableFilterConfigs<User> = {
-  name: null,
-  age: null
-};
-```
-
----
-
-# 何が問題だったのか？
-
-- 設定が複数ファイルに分散している
-- カラム間の整合性が型で保証されない
-- フィルター設定の不整合が検出できない
-
----
-
-# さらなる問題
-
-フィルターの型もすべて `string` になってしまう
-
-イメージ：
-
-```typescript
-const { data } = useUserData({
-  name: filterState.name,
-  age: Number(filterState.age),
-  status: filterState.status as "active" | "inactive",
-})
-```
-
----
-
-# 型安全なテーブルを作りたい
-
-
-
----
-
-```typescript
-const { table, columnFilter } = createTable<UserViewModel>();
-
-const usersTable = table({
-  key: "users",
-  pagination: { perPage: 10 },
-  keywordSearch: { /* キーワード検索の設定 */},
-  columns: [
-    {
-      key: "name",
-      filter: null,
-      sortable: true,
-      visibility: { initialVisibility: true },
-      renderHeadCell: () => "名前",
-      renderBodyCell: ({ row }) => row.name
-    },
-    {
-      key: "age",
-      filter: columnFilter<AgeFilter>({
-        renderPopupContent: ({ filter, setFilter }) => (/* ... */),
-        // ...フィルター設定
-      }),
-      // ...他の設定
-    }
-  ]
-});
-
-```
-
----
-
-# 型安全になった！
-
-```ts
-
-actions.setFilter("age", { min: 20, max: null }); // OK
-actions.setFilter("status", "active"); // OK
-
-// 型エラーが検出される！
-actions.setFilter("nonExistent", { min: 20 }); // NG
-actions.setFilter("status", true); // NG
-```
-
----
-
-# しかし…
-
-
----
-
-例：フィルター可能なカラムのキーだけを抽出する型
-
-```typescript
-type FilterableKeys<T extends TableColumnDefinition<any, any>[]> = {
-  [K in keyof T]: T[K] extends TableColumnDefinition<infer Key, any>
-    ? T[K]["filter"] extends null
-      ? never
-      : Key
-    : never;
-}[number];
-```
-
----
-
-
-例：フィルターの状態の型を推論する
-
-
-```typescript
-type InferFilterState<T extends TableColumnDefinition<any, any>[]> = {
-  [K in FilterableKeys<T>]: Extract<
-    T[number],
-    TableColumnDefinition<K, any>
-  >["filter"] extends TableColumnFilterWithSchema<infer Schema>
-    ? v.InferOutput<Schema> | null
-    : // さらに条件分岐...
-}
-```
-
-
-
-
 ---
 
 ```typescript
@@ -561,7 +388,117 @@ export type TableState<
 
 ---
 
-# 型だけで300行も…
+# どうしてこうなった？
+
+---
+
+
+# 型安全なテーブルを作りたかった
+
+---
+
+![bg contain](./image1.png)
+
+
+---
+
+![bg contain](./image2.png)
+
+
+---
+
+![bg contain](./image3.png)
+
+
+
+---
+
+![bg contain](./image4.png)
+
+---
+
+
+デモ： https://typed-table-demo.vercel.app/
+（このデモは型が主役のため、実装はやっつけになっています）
+
+---
+
+
+```typescript
+const { table, columnFilter } = createTable<UserViewModel>();
+
+const usersTable = table({
+  key: "users",
+  pagination: { perPage: 10 },
+  keywordSearch: { /* キーワード検索の設定 */},
+  columns: [
+    {
+      key: "name",
+      filter: null,
+      sortable: true,
+      visibility: { initialVisibility: true },
+      renderHeadCell: () => "名前",
+      renderBodyCell: ({ row }) => row.name
+    },
+    {
+      key: "age",
+      filter: columnFilter<AgeFilter>({
+        renderPopupContent: ({ filter, setFilter }) => (/* ... */),
+        // ...フィルター設定
+      }),
+      // ...他の設定
+    }
+  ]
+});
+
+```
+
+---
+
+```ts
+
+actions.setFilter("age", { min: 20, max: null }); // OK
+actions.setFilter("status", "active"); // OK
+
+// 型エラーが検出される！
+actions.setFilter("nonExistent", { min: 20 }); // NG
+actions.setFilter("status", true); // NG
+```
+
+
+
+---
+
+例：フィルター可能なカラムのキーだけを抽出する型
+
+```typescript
+type FilterableKeys<T extends TableColumnDefinition<any, any>[]> = {
+  [K in keyof T]: T[K] extends TableColumnDefinition<infer Key, any>
+    ? T[K]["filter"] extends null
+      ? never
+      : Key
+    : never;
+}[number];
+```
+
+---
+
+
+例：フィルターの状態の型を推論する
+
+
+```typescript
+type InferFilterState<T extends TableColumnDefinition<any, any>[]> = {
+  [K in FilterableKeys<T>]: Extract<
+    T[number],
+    TableColumnDefinition<K, any>
+  >["filter"] extends TableColumnFilterWithSchema<infer Schema>
+    ? v.InferOutput<Schema> | null
+    : // さらに条件分岐...
+}
+```
+
+
 
 
 ---
@@ -574,109 +511,106 @@ export type TableState<
 
 ---
 
-# リファクタリングへの挑戦
 
-型を読めてメンテナンスできるようにしよう！
+# 型を読めてメンテナンスできるようにしよう！
 
-※ 厳密には「リファクタリング」ではなく、インターフェースを変更する必要がありました
 
 ---
 
-# リファクタリングの方針
+# リファクタリング方針
 
 1. 型のテストを書いて安全に修正できるようにする
 2. 必要以上の型安全性を追求せず保守性を優先
-3. コンポーネントのコンポジションで解決できる部分は型推論に頼らない
 4. AIを使った型リファクタリング
 
 ---
 
 # 型のテストの導入
 
-```typescript
-test("テーブルのstateが定義から推論されること", () => {
-  expectTypeOf(table.useTable).returns.toHaveProperty("state")
-    .toEqualTypeOf<{
-      keywordSearch: string | null;
-      // ...期待する型
-    }>();
-});
-```
-
-https://vitest.dev/guide/testing-types
-
-安心して編集できる！
-
----
-
-# 型推論に全て頼らず、Reactのコンポジションを活用
-
-Before:
-
-```tsx
-const table = createTable<User>({
-  // ...
-  pagination: null // テーブルで使用しない場合はnull
-});
-
-useTable().state.pagination // null になる
-```
-
-After:
-```tsx
-<Table>
-  {/* <Pagination ... /> */}
-</Table>
-```
-
-型推論がシンプルに！
-
----
-
-# 必要以上の型安全性は追求しない
-
----
-
-Before
-
-```typescript
-type TablePaginationState<
-  TableViewModelBaseType extends AnyTableViewModelBase,
-  TableDefinitionType extends TableDefinition<TableViewModelBaseType>
-> =
-  // TableDefinition から TablePaginationDefinition を取り出す
-  TableDefinitionType extends TableDefinition<
-    TableViewModelBaseType,
-    infer TablePaginationDefinitionInfer
-  >
-    ? TablePaginationDefinitionInfer extends null
-      ? undefined
-      : number
-    : never;
-```
-
----
-
-After
 
 ```ts
-// After: 常に存在する単純な型に
-type TableState = {
-  pagination: number;  // 常に存在、必要なければ使わない
-  keywordSearch: string | null;  // 同様
+expectTypeOf(table.useTable).returns.toHaveProperty("state").toEqualTypeOf<{
+  keywordSearch: string | null;
+  sort: {
+    // sortByはソート可能なカラムのみ
+    sortBy: "name" | "age" | null;
+    sortOrder: "asc" | "desc" | null;
+  };
   // ...
-};
+}>();
 ```
+
+Vitest の型テスト（ <https://vitest.dev/guide/testing-types> ）を使って、
+型推論の結果が期待通りになることをチェック
+
+→安心して編集できる！
+
+後述するAIによるリファクタリング時にも助かった
+
 
 ---
 
 # 必要以上の型安全性は追求しない
 
-プロダクトの安定性に寄与しない必要以上の「型安全性」は追求しない
+---
 
-- 「無い機能のstateが初期状態として出てしまう」程度の問題は許容
-- 過度な抽象化によるデメリットを考慮
-- コードのメンテナンスしやすさを優先
+ページネーションあり：
+```typescript
+const { useTable, Table } = createTable({
+  pagination: { perPage: 10 }
+})
+
+state.pagination // -> 1
+
+<Table />
+```
+
+ページネーションなし：
+```typescript
+const { useTable, Table } = createTable({
+  pagination: null
+})
+
+
+state.pagination // -> 1
+
+<Table />
+```
+
+---
+
+ページネーションあり：
+```tsx
+const { useTable } = createTable({
+  // ページネーションの設定はない
+})
+
+state.pagination // -> 1
+
+<Table>...</Table>
+<Pagination {...}> // コンポジションで実装
+```
+
+ページネーションなし：
+```tsx
+const { useTable } = createTable({
+  // ページネーションの設定はない
+})
+
+state.pagination // -> 1
+
+<Table>...</Table>
+```
+
+
+
+---
+
+# 必要以上の型安全性は追求しない
+
+ページネーションがUIとして出ていなくても初期値（ページ数: `1`）が出てしまうが…
+
+
 
 
 ---
@@ -728,8 +662,13 @@ type ColumnsSortKey<
 
 ---
 
-After
+# ぼく「この型をリファクタリングして」
 
+# Cursor「おｋ」
+
+---
+
+After
 
 ```typescript
 type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
@@ -742,64 +681,27 @@ type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
 
 ```
 
----
 
-# AI は型レベルプログラミングに強い？
-
-- 複雑な型を使っているOSSも学習していそう
-- 検索しにくい言語機能の名前を聞ける（例：Key Remapping）
-
+→ 複雑な型が出てくるOSSを学習しているから型レベルプログラミングが得意？
 
 ---
 
-# 現在の実装
+# 検索しにくい型も「これ何？」で教えてくれる
+
+![](./image5.png)
 
 ---
 
-```typescript
-const table = createTable([
-  {
-    key: "name" as const,
-    filter: null,
-    sortable: true,
-    initialVisibility: true,
-    renderHeadCell() { return "名前"; }
-  },
-  {
-    key: "age" as const,
-    filter: defineTableColumnFilter<AgeFilterType>({ /* フィルタの設定 */ }),
-    // 他の設定...
-  }
-  // 他のカラム...
-]);
-```
+# リファクタリングの結果
 
 
----
-
-
-```typescript
-// 正しい使用例
-actions.setFilter("age", { min: 20, max: 50 });
-
-// 型エラーが発生する例
-// 存在しないカラム
-actions.setFilter("nonExistentColumn", { min: 20 });
-
-// フィルター可能でないカラム
-actions.setFilter("name", { min: 20 });
-```
-
-→ 型安全性は保てている！
-
----
-
-# 型定義がシンプルに！
+## →型定義がシンプルに！
 
 - 行数：300行以上→150行に
 - Conditional Types： 19個→8個に
 - 再帰: 2個→0個に
 
+もちろん、型安全性は保てたまま！
 
 
 ---
@@ -812,6 +714,6 @@ actions.setFilter("name", { min: 20 });
 
 - 具体的な改善
   - 型テストの導入
-  - コンポーネントのコンポジションの活用
+  - 不要な型推論をしない
   - AIを活用したリファクタリング
   - コードの行数が半分に
