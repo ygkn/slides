@@ -417,9 +417,10 @@ export type TableState<
 
 ---
 
-
 デモ： https://typed-table-demo.vercel.app/
-（このデモは型が主役のため、実装はやっつけになっています）
+GitHub：https://github.com/ygkn/typed-table-demo/
+
+（注：型が主役のため、実装がやっつけになっている逆転現象が起こっています）
 
 ---
 
@@ -606,12 +607,12 @@ state.pagination // -> 1
 
 ---
 
-# 必要以上の型安全性は追求しない
+# 必要以上の「型安全性」は追求しない
 
 ページネーションがUIとして出ていなくても初期値（ページ数: `1`）が出てしまうが…
+メンテナンス性のために妥協
 
-
-
+（バックエンドにはページネーション付きでリクエストしてしまい、2ページ以降のデータにアクセスできなくなる恐れはある）
 
 ---
 
@@ -619,7 +620,6 @@ state.pagination // -> 1
 
 ---
 
- Before
 
 ```typescript
 type ColumnsSortKey<
