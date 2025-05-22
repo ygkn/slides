@@ -6,10 +6,10 @@ paginate: true
 # タイプレベルリファクタリング奮闘記
 ## 〜この「型パズル」は読めません！〜
 
-<div style="text-align:right">
-ygkn / Yugo Yagita<br>
-@ygkn35034
-</div>
+ygkn / Yugo Yagita
+
+2025/05/23 [TSKaigi 2025](https://2025.tskaigi.org/)
+
 
 ---
 
@@ -21,6 +21,8 @@ ygkn / Yugo Yagita<br>
 - 株式会社ゆめみ フロントエンドエンジニア
 - TypeScriptとReactを書いています
 - アクセシビリティに興味があります
+- 𝕏 @ygkn35034
+
 ---
 
 ```typescript
@@ -388,6 +390,45 @@ export type TableState<
 
 ---
 
+```ts
+type ColumnsSortKey<
+  TableViewModelBaseType extends AnyTableViewModelBase,
+  ColumnDefinitions extends Array<ColumnDefinition<TableViewModelBaseType>>
+> =
+  // ColumnDefinitions に対して、再帰的に ColumnSortState を適用する
+  number extends ColumnDefinitions["length"]
+    ? never
+    : ColumnDefinitions extends [
+        // 先頭の ColumnDefinition を取り出す
+        ColumnDefinition<
+          TableViewModelBaseType,
+          infer Key,
+          ColumnFilterDefinition<TableViewModelBaseType>,
+          infer ColumnSortDefinitionType
+        >,
+        // 残りの ColumnDefinition の配列を取り出す。
+        ...infer RestColumnDefinitions
+      ]
+    ?
+        | ColumnSortState<TableViewModelBaseType, Key, ColumnSortDefinitionType>
+        // 残りの ColumnDefinitions が空（停止条件）でないならば
+        | (RestColumnDefinitions extends NonEmptyArray<
+            ColumnDefinition<TableViewModelBaseType>
+          >
+            ? // 再帰的に ColumnsSortState を適用する
+              ColumnsSortKey<TableViewModelBaseType, RestColumnDefinitions>
+            : never)
+    : never;
+```
+
+---
+
+興味がある人は↓をご覧ください
+
+https://github.com/ygkn/typed-table-demo/blob/9cf8e2ddfc63a2f32a13a2b00a43a02ac80be0f5/src/features/table/createTable.tsx#L27-L385
+
+---
+
 # どうしてこうなった？
 
 ---
@@ -468,36 +509,6 @@ actions.setFilter("status", true); // NG
 
 
 
----
-
-例：フィルター可能なカラムのキーだけを抽出する型
-
-```typescript
-type FilterableKeys<T extends TableColumnDefinition<any, any>[]> = {
-  [K in keyof T]: T[K] extends TableColumnDefinition<infer Key, any>
-    ? T[K]["filter"] extends null
-      ? never
-      : Key
-    : never;
-}[number];
-```
-
----
-
-
-例：フィルターの状態の型を推論する
-
-
-```typescript
-type InferFilterState<T extends TableColumnDefinition<any, any>[]> = {
-  [K in FilterableKeys<T>]: Extract<
-    T[number],
-    TableColumnDefinition<K, any>
-  >["filter"] extends TableColumnFilterWithSchema<infer Schema>
-    ? v.InferOutput<Schema> | null
-    : // さらに条件分岐...
-}
-```
 
 
 
@@ -508,7 +519,7 @@ type InferFilterState<T extends TableColumnDefinition<any, any>[]> = {
 
 # チームメンバー「この型は読めないですね...」
 
-# 自分「確かに…」
+# 自分「確かに…🦀」
 
 ---
 
@@ -518,7 +529,7 @@ type InferFilterState<T extends TableColumnDefinition<any, any>[]> = {
 
 ---
 
-# リファクタリング方針
+# 型レベルリファクタリング Tips
 
 1. 型のテストを書いて安全に修正できるようにする
 2. 必要以上の型安全性を追求せず保守性を優先
@@ -530,6 +541,7 @@ type InferFilterState<T extends TableColumnDefinition<any, any>[]> = {
 
 
 ```ts
+// `useTable().state` の型 をチェック
 expectTypeOf(table.useTable).returns.toHaveProperty("state").toEqualTypeOf<{
   keywordSearch: string | null;
   sort: {
@@ -541,12 +553,9 @@ expectTypeOf(table.useTable).returns.toHaveProperty("state").toEqualTypeOf<{
 }>();
 ```
 
-Vitest の型テスト（ <https://vitest.dev/guide/testing-types> ）を使って、
-型推論の結果が期待通りになることをチェック
+Vitestの型テスト（<https://vitest.dev/guide/testing-types>）で型推論の結果をチェック
 
-→安心して編集できる！
-
-後述するAIによるリファクタリング時にも助かった
+後述するAIによるリファクタリング時でもガードレールとして助かった
 
 
 ---
@@ -684,6 +693,8 @@ type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
 
 → 複雑な型が出てくるOSSを学習しているから型レベルプログラミングが得意？
 
+ただし、プロンプトを気をつけないと `any` や `@ts-ignore` を使われることも
+
 ---
 
 # 検索しにくい型も「これ何？」で教えてくれる
@@ -695,10 +706,11 @@ type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
 # リファクタリングの結果
 
 
-## →型定義がシンプルに！
+## 型定義がシンプルに！
 
 - 行数：300行以上→150行に
 - Conditional Types： 19個→8個に
+- `infer`: 14個→3個に
 - 再帰: 2個→0個に
 
 もちろん、型安全性は保てたまま！
