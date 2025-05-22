@@ -632,6 +632,7 @@ state.pagination // -> 1
 
 
 ```typescript
+
 type ColumnsSortKey<
   TableViewModelBaseType extends TableViewModelBase,
   ColumnDefinitions extends Array<ColumnDefinition<TableViewModelBaseType>>,
@@ -672,25 +673,24 @@ type ColumnsSortKey<
 
 ---
 
-# 「この型をリファクタリングして」
+# 「この型をリファクタリングして」と言うと…
 
----
-
-After
 
 ```typescript
-type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
-  ColumnDefinitions extends [
-    ColumnDefinition<infer Key, ColumnFilterDefinition, true>,
-    ...infer RestColumnDefinitions extends ColumnDefinition[],
-  ]
-    ? Key | SortableColumnKey<RestColumnDefinitions>
+type ColumnsSortKey<T extends ColumnDefinition[]> = {
+  [K in keyof T]: T[K] extends ColumnDefinition<
+    infer Key,
+    ColumnFilterDefinition,
+    true
+  >
+    ? Key
     : never;
-
+}[number];
 ```
 
+再帰の代わりにMapped Typesを使い、23行→9行に
 
-→ 複雑な型が出てくるOSSを学習しているから型レベルプログラミングが得意？
+考察： 複雑な型が出てくるOSSを学習しているから型レベルプログラミングが得意？
 
 （ただし、プロンプトを気をつけないと `any` や `@ts-ignore` を使われることも）
 
@@ -717,14 +717,8 @@ type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
 
 ---
 
-# まとめ
+# 「型パズル」は悪なのか？
 
-- 本当に必要な型安全性を見極める
-  - 過度な型安全性の追求は読みにくいコードに
-  - チームでメンテナンスできる状態を目指す
-
-- 具体的な改善
-  - 型テストの導入
-  - 不要な型推論をしない
-  - AIを活用したリファクタリング
-  - コードの行数が半分に
+- 複雑な型の操作を「できない」と「あえてしない」は違う
+- テクニックを知りつつ、それを回避できる場面と方法を知ることが大事
+- 「」
