@@ -672,9 +672,7 @@ type ColumnsSortKey<
 
 ---
 
-# ぼく「この型をリファクタリングして」
-
-# Cursor「おｋ」
+# 「この型をリファクタリングして」
 
 ---
 
@@ -694,7 +692,7 @@ type SortableColumnKey<ColumnDefinitions extends ColumnDefinition[]> =
 
 → 複雑な型が出てくるOSSを学習しているから型レベルプログラミングが得意？
 
-ただし、プロンプトを気をつけないと `any` や `@ts-ignore` を使われることも
+（ただし、プロンプトを気をつけないと `any` や `@ts-ignore` を使われることも）
 
 ---
 
