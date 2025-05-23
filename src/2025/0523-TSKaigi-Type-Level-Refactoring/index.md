@@ -16,13 +16,15 @@ ygkn / Yugo Yagita
 
 # 自己紹介
 
-![bg right:35% 60%](https://github.com/ygkn.png)
+![bg right:32% 60%](https://github.com/ygkn.png)
 
 - Yugo Yagita (ygkn)
 - 株式会社ゆめみ フロントエンドエンジニア
 - TypeScriptとReactを書いています
-- アクセシビリティに興味があります
-- 𝕏 @ygkn35034
+- アクセシビリティやっています
+  - [ゆめみのアクセシビリティ](https://note.yumemi.co.jp/m/m625fa4a0c25e)
+- [Storybookを開くVS Code拡張機能](https://github.com/ygkn/storybook-opener)とか作ってます
+- 𝕏 [@ygkn35034](https://x.com/ygkn35034)
 
 ---
 
